@@ -1,4 +1,4 @@
-# RSync: React Native SQLite Query Builder
+# RSync: Redux async middleware
 
 [![RSync](./banner.png)](https://github.com/adhyapranata/rsync)
 
@@ -38,7 +38,7 @@ import { loadInitialData } from './redux/flow';
 
 ...
 const mapDispatchToProps = (dispatch) => ({
-  requestGetPosts: payload => dispatch(postSlice.actions.requestGetPosts(payload)),
+  requestGetUsers: payload => dispatch(postSlice.actions.requestGetUsers(payload)),
   loadInitialData: payload => dispatch(loadInitialData(payload)),
 });
 ...
@@ -86,9 +86,9 @@ export const userSlice = createSlice({
               effect: payload => { // the side effect to run
                 fetch('https://httpbin.org/get', payload.params)
               },
-              resolve: { type: 'user/resolveRequestGetUsers' }, // will be dispatched if effect successful
-              reject: { type: 'user/rejectRequestGetUsers' }, // will be dispatched if effect failed
-              take: 'latest' // cancels previous effect started previously and only take the latest
+              resolve: { type: 'user/resolveRequestGetUsers' }, // will be dispatched if effect is successful
+              reject: { type: 'user/rejectRequestGetUsers' }, // will be dispatched if effect is failed
+              take: 'latest' // cancels previous same effect started previously, if it's still runnning, and only take the latest
             }
           }
         }
@@ -123,7 +123,7 @@ export const loadInitialData = createAction('LOAD_INITIAL_DATA', (payload) => {
         actions: [
           {
             effect: userSlice.actions.requestGetUsers,
-            break: ({ response }) => !response.data.args.users.length // you can break the flow if you don't like the result of your async effect
+            break: ({ response }) => !response.data.args.users.length // you can break the flow early if you don't like the result of your async effect
           },
           {
             prepare: payload => {
