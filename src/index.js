@@ -1,5 +1,5 @@
-import async from './src/async';
-import flow from './src/flow';
+import async from './async';
+import flow from './flow';
 
 export default store => next => action => {
   const { payload, meta } = action;
