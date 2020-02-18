@@ -1,25 +1,27 @@
 class Async {
-  index = 0;
-  state = {
-    runningTasks: [],
-    cancelledTasks: []
-  };
+  constructor () {
+    this.index = 0
+    this.state = {
+      runningTasks: [],
+      cancelledTasks: []
+    }
+  }
 
-  _addTask(type) {
+  _addTask (type) {
     this.state.runningTasks = [
       ...this.state.runningTasks,
       { index: this.index, type }
-    ];
+    ]
 
-    this.index++;
+    this.index++
   }
 
-  _cancelRunningTask({ type }) {
-    this.state.runningTasks = this.state.runningTasks.filter(task => task.type !== type);
+  _cancelRunningTask ({ type }) {
+    this.state.runningTasks = this.state.runningTasks.filter(task => task.type !== type)
   }
 
-  _findTasks(type) {
-    const { runningTasks, cancelledTasks } = this.state;
+  _findTasks (type) {
+    const { runningTasks, cancelledTasks } = this.state
 
     return {
       prevRunningTask: runningTasks.find(task => task.type === type),
@@ -27,82 +29,82 @@ class Async {
     }
   }
 
-  _isCancelled(type) {
+  _isCancelled (type) {
     return !this.state.runningTasks.find(task => type === task.type)
   }
 
-  _isTakeLatest(take, type, queue) {
+  _isTakeLatest (take, type, queue) {
     return (
       take === 'latest' &&
       !this.state.runningTasks.find(task => (
         task.type === type && task.index === queue
       ))
-    );
+    )
   }
 
-  _updateState(type, cancel) {
-    if (cancel) return;
+  _updateState (type, cancel) {
+    if (cancel) return
 
-    const { prevRunningTask, prevCancelledTask } = this._findTasks(type);
+    const { prevRunningTask, prevCancelledTask } = this._findTasks(type)
 
     if (!prevRunningTask && !prevCancelledTask) {
-      this._addTask(type);
-      return;
+      this._addTask(type)
+      return
     }
 
     if (prevRunningTask) {
-      this._updateTask(type);
+      this._updateTask(type)
     }
   }
 
-  _updateTask(type) {
+  _updateTask (type) {
     this.state.runningTasks = this.state.runningTasks.map(task => {
       return task.type === type
         ? { ...task, index: this.index }
-        : task;
-    });
+        : task
+    })
 
     this.state.cancelledTasks = [
       ...this.state.cancelledTasks,
       { index: this.index - 1, type }
-    ];
+    ]
 
-    this.index++;
+    this.index++
   }
 
-  _cleanPrevCancelledTasks(type) {
-    this.state.cancelledTasks = this.state.cancelledTasks.filter(task => task.type !== type);
+  _cleanPrevCancelledTasks (type) {
+    this.state.cancelledTasks = this.state.cancelledTasks.filter(task => task.type !== type)
   }
 
-  _completeRunningTask(queue) {
-    this.state.runningTasks = this.state.runningTasks.filter(task => task.index !== queue);
+  _completeRunningTask (queue) {
+    this.state.runningTasks = this.state.runningTasks.filter(task => task.index !== queue)
   }
 
   async handle (store, type, payload, meta) {
-    let response;
-    const { effect, resolve, reject, cancel, cancelled } = meta;
-    const queue = this.index;
-    const take = meta.take || 'every:parallel';
+    let response
+    const { effect, resolve, reject, cancel, cancelled } = meta
+    const queue = this.index
+    const take = meta.take || 'every:parallel'
 
-    this._updateState(type, cancel);
+    this._updateState(type, cancel)
 
     if (cancel) {
-      this._cancelRunningTask(cancel);
+      this._cancelRunningTask(cancel)
     }
 
     try {
-      if (this._isTakeLatest(take, type, queue)) return;
+      if (this._isTakeLatest(take, type, queue)) return
       if (this._isCancelled(type)) {
-        if (effect) await effect(payload);
-        return;
+        if (effect) await effect(payload)
+        return
       }
 
-      response = await effect(payload);
+      response = await effect(payload)
 
-      if (this._isTakeLatest(take, type, queue)) return;
+      if (this._isTakeLatest(take, type, queue)) return
       if (this._isCancelled(type)) {
-        if (effect) await effect(payload);
-        return;
+        if (effect) await effect(payload)
+        return
       }
 
       store.dispatch({
@@ -113,10 +115,10 @@ class Async {
           response,
           state: store.getState()
         }
-      });
+      })
 
-      this._completeRunningTask(queue);
-      this._cleanPrevCancelledTasks(type);
+      this._completeRunningTask(queue)
+      this._cleanPrevCancelledTasks(type)
     } catch (error) {
       store.dispatch({
         type: reject.type,
@@ -126,10 +128,10 @@ class Async {
           error,
           state: store.getState()
         }
-      });
+      })
 
-      this._completeRunningTask(queue);
-      this._cleanPrevCancelledTasks(type);
+      this._completeRunningTask(queue)
+      this._cleanPrevCancelledTasks(type)
     } finally {
       if (cancelled) {
         store.dispatch({
@@ -137,12 +139,12 @@ class Async {
           payload: {
             type: cancel.type
           }
-        });
+        })
       }
     }
 
-    return response;
+    return response
   }
 }
 
-export default new Async();
+export default new Async()

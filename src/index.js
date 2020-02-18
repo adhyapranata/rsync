@@ -1,18 +1,18 @@
-import async from './async';
-import flow from './flow';
+import async from './async'
+import flow from './flow'
 
-export default store => next => action => {
-  const { payload, meta } = action;
+export default ({ dispatch, getState }) => next => action => {
+  const { payload, meta } = action
 
-  if (meta && !payload.hasOwnProperty('ignoreEffect')) {
-    if (meta.hasOwnProperty('async')) {
-      async.handle(store, action.type, payload, meta.async);
+  if (meta && !Object.prototype.hasOwnProperty.call(payload, 'ignoreEffect')) {
+    if (Object.prototype.hasOwnProperty.call(meta, 'async')) {
+      async.handle({ dispatch, getState }, action.type, payload, meta.async)
     }
 
-    if (meta.hasOwnProperty('flow')) {
-      flow.handle(store, action.type, payload, meta.flow);
+    if (Object.prototype.hasOwnProperty.call(meta, 'flow')) {
+      flow.handle({ dispatch, getState }, action.type, payload, meta.flow)
     }
   }
 
-  next(action);
+  next(action)
 }

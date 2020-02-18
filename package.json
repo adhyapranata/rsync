@@ -31,5 +31,8 @@
     "babel-jest": "^24.9.0",
     "jest": "^24.9.0",
     "standard": "^14.1.0"
+  },
+  "standard": {
+    "env": [ "jest" ]
   }
 }
