@@ -1,7 +1,7 @@
-import async, { Async } from '../async'
+import async, { Async } from '../src/async'
 
 describe('async', () => {
-  let asyncObj, flowObj, action, store
+  let asyncObj, action, store, throwTypeErr
   const payload = { foo: 'bar' }
 
   beforeEach(() => {
@@ -14,23 +14,7 @@ describe('async', () => {
         async: {
           effect: jest.fn(),
           resolve: { type: 'user/resolveFetchUsers' },
-          reject: { type: 'user/rejectFetchUsers' },
-        }
-      }
-    })
-
-    flowObj = payload => ({
-      type: 'user/getUsers',
-      payload,
-      meta: {
-        flow: {
-          actions: [
-            {
-              effect: asyncObj
-            }
-          ],
-          resolve: { type: 'user/resolveGetUsers' },
-          reject: { type: 'user/rejectGetUsers' }
+          reject: { type: 'user/rejectFetchUsers' }
         }
       }
     })
@@ -67,7 +51,7 @@ describe('async', () => {
 
       const matchingTask = async.state.runningTasks.find(task => task.type === action.type)
 
-      expect(matchingTask).toBeFalsy()
+      expect(matchingTask).toBe(undefined)
     })
   })
 
@@ -105,7 +89,7 @@ describe('async', () => {
 
       async._cancelRunningTask(cancel)
 
-      expect(async._isCancelled(cancel.type)).toBeTruthy()
+      expect(async._isCancelled(cancel.type)).toBe(true)
     })
   })
 
@@ -118,7 +102,7 @@ describe('async', () => {
 
       const isTakeLatest = async._isTakeLatest('latest', action.type, 1)
 
-      expect(isTakeLatest).toBeTruthy()
+      expect(isTakeLatest).toBe(true)
     })
   })
 
@@ -233,7 +217,7 @@ describe('async', () => {
 
   describe('_completeRunningTask', () => {
     it('must remove the task from running tasks list after completion', () => {
-      const index = 0;
+      const index = 0
       const tasks = [{ index, type: action.type }]
 
       async.state.runningTasks = tasks
@@ -376,7 +360,7 @@ describe('async', () => {
           type: 'user/fetchUsers',
           state: undefined,
           foo: 'bar',
-          response: undefined,
+          response: undefined
         }
       })
     })
@@ -387,7 +371,7 @@ describe('async', () => {
       const meta = {
         async: {
           ...action.meta.async,
-          effect: () => throwRefErr(),
+          effect: () => throwTypeErr(),
           take: 'latest'
         }
       }
@@ -400,7 +384,7 @@ describe('async', () => {
           type: 'user/fetchUsers',
           state: undefined,
           foo: 'bar',
-          error: new ReferenceError('throwRefErr is not defined'),
+          error: new TypeError('throwTypeErr is not a function')
         }
       })
     })
@@ -439,7 +423,7 @@ describe('async', () => {
       const meta = {
         async: {
           ...action.meta.async,
-          effect: () => throwRefErr(),
+          effect: () => throwTypeErr(),
           take: 'latest'
         }
       }
@@ -457,7 +441,7 @@ describe('async', () => {
       const meta = {
         async: {
           ...action.meta.async,
-          effect: () => throwRefErr(),
+          effect: () => throwTypeErr(),
           take: 'latest'
         }
       }

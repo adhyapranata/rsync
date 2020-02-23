@@ -1,4 +1,4 @@
-import rsyncMiddleware from '../index'
+import rsyncMiddleware from '../src/index'
 
 describe('rsync middleware', () => {
   const doDispatch = () => {}

@@ -80,7 +80,7 @@ export class Flow {
     const response = await this._triggerEffect(store, asyncAction, payload)
 
     if (this._responseIsNotValid(response, store, flowAction, payload)) {
-      throw Error(`${type}_EXCEPTION: Action ${asyncAction.type} is broken by user condition`)
+      throw new Error(`${type}_EXCEPTION: Action ${asyncAction.type} is broken by user condition`)
     }
 
     return [...prevResponse, { response, type: asyncAction.type }]
