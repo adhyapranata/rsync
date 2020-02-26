@@ -29,129 +29,209 @@ yarn add redux-rsync
 
 ## Getting Started
 
-**`container/Home.js`**
+**`redux/action.js`**
 ```javascript
-import React, { useEffect } from 'react';
-import { connect } from 'react-redux';
-import { postSlice } from './redux/slice';
-import { loadInitialData } from './redux/flow';
+import api from '../api'
 
 ...
-const mapDispatchToProps = (dispatch) => ({
-  requestGetUsers: payload => dispatch(postSlice.actions.requestGetUsers(payload)),
-  loadInitialData: payload => dispatch(loadInitialData(payload)),
-});
+export function requestGetUser (payload) {
+  return {
+    type: 'REQUEST_GET_USER',
+    payload,
+    meta: {
+      async: {
+        effect: () => api.user.show(),
+        resolve: { type: 'RESOLVE_REQUEST_GET_USER' },
+        reject: { type: 'REJECT_REQUEST_GET_USER' },
+        take: 'latest'
+      }
+    }
+  }
+}
+...
+```
+
+**`redux/flow.js`**
+```javascript
+import { requestGetUser, requestGetPosts } from './action'
+import { loadInitialDataParams } from './prepare'
+
+...
+export function loadInitialData (payload) {
+  return {
+    type: 'LOAD_INITIAL_DATA',
+    payload,
+    meta: {
+      flow: {
+        actions: [
+          [
+            {
+              effect: requestGetUser,
+              break: ({ response }) => !response.data.args.user
+            },
+            {
+              prepare: loadInitialDataParams.requestGetPosts,
+              effect: requestGetPosts
+            }
+          ]
+        ],
+        resolve: { type: 'RESOLVE_LOAD_INITIAL_DATA' },
+        reject: { type: 'REJECT_LOAD_INITIAL_DATA' },
+        take: 'every:serial'
+      }
+    }
+  }
+}
 ...
 ```
 
 **`redux/index.js`**
 ```javascript
-import { configureStore } from '@reduxjs/toolkit';
-import { userSlice } from './slice';
-import rsync from 'redux-rsync';
+import rootReducer from './reducer'
+import rsync from 'redux-rsync'
+import { createStore, applyMiddleware } from 'redux'
 
-export const store = configureStore({
-  reducer: {
-    [userSlice.name]: userSlice.reducer
-  },
-  middleware: [rsync]
-});
-```
-
-**`redux/slice.js`**
-```javascript
-import { createSlice } from '@reduxjs/toolkit';
-
-export const userSlice = createSlice({
-  name: 'user',
-  initialState: {
-    data: [],
-    errors: [],
-    selected: {},
-    isFetching: false,
-    isFetched: false,
-    isQuerying: false,
-    isQueried: false
-  },
-  reducers: {
-    requestGetUsers: {
-      reducer(state) {
-        return {...state, isFetching: true, isFetched: false};
-      },
-      prepare(payload) { // customize redux action
-        return {
-          payload,
-          meta: { // add meta:async property
-            async: {
-              effect: payload => { // the side effect to run
-                fetch('https://httpbin.org/get', payload.params)
-              },
-              resolve: { type: 'user/resolveRequestGetUsers' }, // will be dispatched if effect is successful
-              reject: { type: 'user/rejectRequestGetUsers' }, // will be dispatched if effect is failed
-              take: 'latest' // cancels previous same effect started previously, if it's still runnning, and only take the latest
-            }
-          }
-        }
-      }
-    },
-    resolveRequestGetUsers: (state, action) => ({
-      ...state,
-      data: JSON.parse(action.payload.response.data.args.users),
-      isFetching: false,
-      isFetched: true
-    }),
-    rejectRequestGetUsers: (state, action) => ({
-      ...state,
-      errros: [...state.errors, action.payload.error],
-      isFetching: false,
-      isFetched: true
-    })
-  }
-});
-```
-
-**`redux/flow.js`**
-```javascript
-import { createAction } from '@reduxjs/toolkit';
-import { userSlice, postSlice } from './slice';
-
-export const loadInitialData = createAction('LOAD_INITIAL_DATA', (payload) => {
-  return {
-    payload,
-    meta: {
-      flow: {
-        actions: [
-          {
-            effect: userSlice.actions.requestGetUsers,
-            break: ({ response }) => !response.data.args.users.length // you can break the flow early if you don't like the result of your async effect
-          },
-          {
-            prepare: payload => {
-              const { params = {}, prevResponse } = payload;
-              const requestGetUsers = prevResponse
-                .find(prev => prev.type === 'user/requestGetUsers')
-                .response;
-         
-                return {
-                  ...params,
-                  user: JSON.parse(requestGetUsers.data.args.users)[0]
-                }
-            }, // you can process the result from previous effect and prepare it as parameter for this effect
-            effect: postSlice.actions.requestGetPosts,
-          }
-        ],
-        resolve: { type: 'flow/resolveLoadInitialData' },
-        reject: { type: 'flow/rejectLoadInitialData' },
-        take: 'every:serial' // will take every `loadInitialData` action and run it in serial (queued)
-      }
-    }
-  }
-});
+export const store = createStore(
+  rootReducer,
+  applyMiddleware(rsync)
+)
 ```
 
 ## Documentation
 
-Coming soon
+RSync works by decorating actions with `async` and/or `flow` metadata
+
+- [Async](#async)
+- [Flow](#flow)
+
+### Async
+
+#### Example
+```javascript
+import api from '../api'
+
+...
+export function requestGetUser (payload) {
+  return {
+    type: 'REQUEST_GET_USER',
+    payload,
+    meta: {
+      async: {
+        effect: () => api.user.show(),
+        resolve: { type: 'RESOLVE_REQUEST_GET_USER' },
+        reject: { type: 'REJECT_REQUEST_GET_USER' },
+        take: 'latest'
+      }
+    }
+  }
+}
+...
+```
+
+#### Properties
+
+| Property          | Type     | Value                               | Description                                                                                                                                    |
+| ----------------- | -------- | ----------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| `effect`          | function | `payload => {}`                     | Async side effect to run                                                                                                                       |
+| `resolve`         | object   | `{ type: '<ACTION_NAME>' }`         | Will be dispatched if the effect execution is successful                                                                                       |
+| `reject`          | object   | `{ type: '<ACTION_NAME>' }`         | Will be dispatched if the effect execution is failed                                                                                           |
+| `take`            | string   | `every:parallel`(default), `latest` | `latest`: if an action effect still running when another action with the same `type` is dispatched, then the previous action will be cancelled |
+|                   |          |                                     | `every:parallel`: take all dispatched actions                                                                                                  |
+
+### Flow
+
+#### Example
+```javascript
+// async.js
+import api from '../api'
+
+...
+export function requestGetUser (payload) {
+  return {
+    type: 'REQUEST_GET_USER',
+    payload,
+    meta: {
+      async: {
+        effect: () => api.user.show(),
+        resolve: { type: 'RESOLVE_REQUEST_GET_USER' },
+        reject: { type: 'REJECT_REQUEST_GET_USER' },
+        take: 'latest'
+      }
+    }
+  }
+}
+
+export function requestGetPosts (payload) {
+  return {
+    type: 'REQUEST_GET_POSTS',
+    payload,
+    meta: {
+      async: {
+        effect: () => api.post.index(),
+        resolve: { type: 'RESOLVE_REQUEST_GET_POSTS' },
+        reject: { type: 'REJECT_REQUEST_GET_POSTS' },
+        take: 'latest'
+      }
+    }
+  }
+}
+...
+
+
+// flow.js
+import { requestGetUser, requestGetPosts } from './action'
+import { loadInitialDataParams } from './prepare'
+
+...
+export function loadInitialData (payload) {
+  return {
+    type: 'LOAD_INITIAL_DATA',
+    payload,
+    meta: {
+      flow: {
+        actions: [ // will be executed in order
+          {
+            effect: requestGetUser,
+            break: ({ response }) => !response.data.args.user
+          },
+          {
+            prepare: loadInitialDataParams.requestGetPosts,
+            effect: requestGetPosts
+          },
+          [ // to execute multiple async actions in parallel, wrap them inside another array 
+            {
+              prepare: loadInitialDataParams.doFoo,
+              effect: doFoo
+            },
+            {
+              prepare: loadInitialDataParams.doBar,
+              effect: doBar
+            },
+          ]       
+        ],
+        resolve: { type: 'RESOLVE_LOAD_INITIAL_DATA' },
+        reject: { type: 'REJECT_LOAD_INITIAL_DATA' },
+        take: 'every:serial'
+      }
+    }
+  }
+}
+...
+```
+
+#### Properties
+
+| Property          | Type              | Value                                                                   | Description                                                                                                                                              |
+| ----------------- | ----------------- | ----------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `actions`         | array[object] or  | `[{ effect: () => {} }, ...}]`                                          | Array of actions to run. The action will support these following properties: `effect`, `prepare`, `break`                                                |
+|                   | array[array]      |                                                                         | The actions will be executed in order. To run the actions in parallel, Wrapping the actions inside another another array will do it. (see example above) |
+|                   |                   |                                                                         | `effect`: function that will return redux action with `meta:async` property. (see example above)                                                         |
+|                   |                   |                                                                         | `prepare`: function to prepare result/response from previous async action into params for the current action                                             |
+|                   |                   |                                                                         | `break`: function to evaluate the result/response from the action. return `true` to break the flow or return `false` to continue                         |
+| `resolve`         | object            | `{ type: '<ACTION_NAME>' }`                                             | Will be dispatched if the effect execution is successful                                                                                                 |
+| `reject`          | object            | `{ type: '<ACTION_NAME>' }`                                             | Will be dispatched if the effect execution is failed                                                                                                     |
+| `take`            | string            | `first`(default), `every:serial`, `every:parallel`                      | `first`: will not accept any flow actions with the same `type` with the one that currently running unti it's done                                        |
+|                   |                   |                                                                         | `every:serial`: take all dispatched flow actions with the same `type`, put them in a queue and execute them in serial                                    |
 
 ## Contributing
 
