@@ -29,6 +29,22 @@ yarn add redux-rsync
 
 ## Getting Started
 
+**1. Apply rsync middlware**
+**`redux/index.js`**
+```javascript
+import rootReducer from './reducer'
+import rsync from 'redux-rsync'
+import { createStore, applyMiddleware } from 'redux'
+
+export const store = createStore(
+  rootReducer,
+  applyMiddleware(rsync)
+)
+```
+
+
+**2. Decorate actions with async or flow metadata**
+
 **`redux/action.js`**
 ```javascript
 import api from '../api'
@@ -85,18 +101,6 @@ export function loadInitialData (payload) {
 ...
 ```
 
-**`redux/index.js`**
-```javascript
-import rootReducer from './reducer'
-import rsync from 'redux-rsync'
-import { createStore, applyMiddleware } from 'redux'
-
-export const store = createStore(
-  rootReducer,
-  applyMiddleware(rsync)
-)
-```
-
 ## Documentation
 
 RSync works by decorating actions with `async` and/or `flow` metadata
@@ -133,10 +137,9 @@ export function requestGetUser (payload) {
 | Property          | Type     | Value                               | Description                                                                                                                                    |
 | ----------------- | -------- | ----------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
 | `effect`          | function | `payload => {}`                     | Async side effect to run                                                                                                                       |
-| `resolve`         | object   | `{ type: '<ACTION_NAME>' }`         | Will be dispatched if the effect execution is successful                                                                                       |
-| `reject`          | object   | `{ type: '<ACTION_NAME>' }`         | Will be dispatched if the effect execution is failed                                                                                           |
-| `take`            | string   | `every:parallel`(default), `latest` | `latest`: if an action effect still running when another action with the same `type` is dispatched, then the previous action will be cancelled |
-|                   |          |                                     | `every:parallel`: take all dispatched actions                                                                                                  |
+| `resolve`         | object   | `{ type: '<ACTION_NAME>' }`         | Will be dispatched if the effect execution is successful. Payload and effect result/response will be passed to the reducer automatically       |
+| `reject`          | object   | `{ type: '<ACTION_NAME>' }`         | Will be dispatched if the effect execution is failed. Payload and error will be passed to the reducer automatically                            |
+| `take`            | string   | `every:parallel`(default), `latest` | `latest`: if an action effect still running when another action with the same `type` is dispatched, then the previous action will be cancelled<br><br>`every:parallel`: take all dispatched actions |
 
 ### Flow
 
@@ -221,17 +224,12 @@ export function loadInitialData (payload) {
 
 #### Properties
 
-| Property          | Type              | Value                                                                   | Description                                                                                                                                              |
-| ----------------- | ----------------- | ----------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `actions`         | array[object] or  | `[{ effect: () => {} }, ...}]`                                          | Array of actions to run. The action will support these following properties: `effect`, `prepare`, `break`                                                |
-|                   | array[array]      |                                                                         | The actions will be executed in order. To run the actions in parallel, Wrapping the actions inside another another array will do it. (see example above) |
-|                   |                   |                                                                         | `effect`: function that will return redux action with `meta:async` property. (see example above)                                                         |
-|                   |                   |                                                                         | `prepare`: function to prepare result/response from previous async action into params for the current action                                             |
-|                   |                   |                                                                         | `break`: function to evaluate the result/response from the action. return `true` to break the flow or return `false` to continue                         |
-| `resolve`         | object            | `{ type: '<ACTION_NAME>' }`                                             | Will be dispatched if the effect execution is successful                                                                                                 |
-| `reject`          | object            | `{ type: '<ACTION_NAME>' }`                                             | Will be dispatched if the effect execution is failed                                                                                                     |
-| `take`            | string            | `first`(default), `every:serial`, `every:parallel`                      | `first`: will not accept any flow actions with the same `type` with the one that currently running unti it's done                                        |
-|                   |                   |                                                                         | `every:serial`: take all dispatched flow actions with the same `type`, put them in a queue and execute them in serial                                    |
+| Property          | Type                    | Value                                                                   | Description                                                                                                                                              |
+| ----------------- | ----------------------- | ----------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `actions`         | array[object/array] or  | `[{ effect: () => {}, ... }, ...}]`                                     | Array of actions to run. The action will support these following properties: `effect`, `prepare`, `break`<br><br>The actions will be executed in order. To run the actions in parallel, Wrapping the actions inside another another array will do it. (see example above)<br><br>`effect`: function that will return redux action with `meta:async` property. (see example above)<br><br>`prepare`: function to prepare result/response from previous async action into params for the current action<br><br>`break`: function to evaluate the result/response from the action. return `true` to break the flow or return `false` to continue |
+| `resolve`         | object                  | `{ type: '<ACTION_NAME>' }`                                             | Will be dispatched if the effect execution is successful. Effect result/response will be passed to the reducer automatically.                            |
+| `reject`          | object                  | `{ type: '<ACTION_NAME>' }`                                             | Will be dispatched if the effect execution is failed. Error will be passed to the reducer automatically.                                                 |
+| `take`            | string                  | `first`(default), `every:serial`, `every:parallel`                      | `first`: will not accept any flow actions with the same `type` with the one that currently running unti it's done<br><br>`every:serial`: take all dispatched flow actions with the same `type`, put them in a queue and execute them in serial  |
 
 ## Contributing
 
