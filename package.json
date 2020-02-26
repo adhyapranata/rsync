@@ -1,0 +1,38 @@
+{
+  "name": "redux-rsync",
+  "version": "0.1.0",
+  "license": "MIT",
+  "description": "Redux saga alternative to handle async actions",
+  "repository": "git@github.com:adhyapranata/rsync.git",
+  "bugs": "https://github.com/adhyapranata/rsync/issues",
+  "homepage": "https://github.com/adhyapranata/rsync",
+  "keywords": [
+    "redux",
+    "rsync",
+    "effects",
+    "middleware",
+    "redux-middleware",
+    "async"
+  ],
+  "author": "Adhya Pranata <adhyapranata@gmail.com>",
+  "main": "src/index.js",
+  "scripts": {
+    "lint": "standard",
+    "test": "jest",
+    "test:watch": "jest --watch"
+  },
+  "files": [
+    "src/"
+  ],
+  "devDependencies": {
+    "@babel/core": "^7.5.5",
+    "@babel/plugin-proposal-class-properties": "^7.8.3",
+    "@babel/preset-env": "^7.5.5",
+    "babel-jest": "^24.9.0",
+    "jest": "^24.9.0",
+    "standard": "^14.1.0"
+  },
+  "standard": {
+    "env": [ "jest" ]
+  }
+}
