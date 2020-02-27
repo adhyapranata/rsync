@@ -123,9 +123,13 @@ export class Flow {
         prevResponse = await this._run(props)
       }
 
-      store.dispatch({ type: resolve.type, responses: prevResponse })
+      if (resolve) {
+        store.dispatch({ type: resolve.type, responses: prevResponse })
+      }
     } catch (error) {
-      store.dispatch({ type: reject.type, error })
+      if (reject) {
+        store.dispatch({ type: reject.type, error })
+      }
     } finally {
       this.blockFlow = false
 
