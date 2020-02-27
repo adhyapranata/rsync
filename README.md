@@ -106,6 +106,7 @@ RSync works by decorating actions with `async` and/or `flow` metadata. `async` i
 
 - [Async](#async)
 - [Flow](#flow)
+- [Task Cancellation](#task-cancellation)
 
 ### Async
 
@@ -133,12 +134,12 @@ export function requestGetUser (payload) {
 
 #### Properties
 
-| Property          | Type     | Value                               | Description                                                                                                                                    |
-| ----------------- | -------- | ----------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
-| `effect`          | function | `payload => {...}`                  | Async side effect to run                                                                                                                       |
-| `resolve`         | object   | `{ type: '<ACTION_NAME>' }`         | Will be dispatched if the effect execution is successful. Payload and effect result/response will be passed to the reducer automatically       |
-| `reject`          | object   | `{ type: '<ACTION_NAME>' }`         | Will be dispatched if the effect execution is failed. Payload and error will be passed to the reducer automatically                            |
-| `take`            | string   | `every:parallel`(default), `latest` | `latest`: if an action effect still running when another action with the same `type` is dispatched, then the previous action will be cancelled<br><br>`every:parallel`: take all dispatched actions |
+| Property          | Type              | Value                               | Description                                                                                                                                    |
+| ----------------- | ----------------- | ----------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| `effect`          | function          | `payload => {...}`                  | Async side effect to run                                                                                                                       |
+| `resolve`         | object (optional) | `{ type: '<ACTION_NAME>' }`         | Will be dispatched if the effect execution is successful. Payload and effect result/response will be passed to the reducer automatically       |
+| `reject`          | object (optional) | `{ type: '<ACTION_NAME>' }`         | Will be dispatched if the effect execution is failed. Payload and error will be passed to the reducer automatically                            |
+| `take`            | string (optional) | `every:parallel`(default), `latest` | `latest`: if an action effect still running when another action with the same `type` is dispatched, then the previous action will be cancelled<br><br>`every:parallel`: take all dispatched actions |
 
 ### Flow
 
@@ -233,9 +234,45 @@ export function loadInitialData (payload) {
 | Property          | Type                    | Value                                                                   | Description                                                                                                                                              |
 | ----------------- | ----------------------- | ----------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `actions`         | array[object/array]     | `[{ effect: () => {...}, ... }]`                                        | Array of actions to run. The action will support these following properties: `effect`, `prepare`, `break`<br><br>The actions will be executed in order. To run multiple actions at once, wrap them inside an array. (see example above)<br><br>`effect`: function that will return redux action with `meta:async` property. (see example above)<br><br>`prepare`: function to prepare result/response from previous async action into params for the current action<br><br>`break`: function to evaluate the result/response from the action. return `true` to stop the flow or return `false` to continue |
-| `resolve`         | object                  | `{ type: '<ACTION_NAME>' }`                                             | Will be dispatched if the whole flow actions is successful. Effect result/response will be passed to the reducer automatically.                            |
-| `reject`          | object                  | `{ type: '<ACTION_NAME>' }`                                             | Will be dispatched when one of the flow action is failed. Error will be passed to the reducer automatically.                                                 |
-| `take`            | string                  | `first`(default), `every:serial`                                        | `first`: will not accept any flow actions with the same `type` with the one that currently running unti it's done<br><br>`every:serial`: take all dispatched flow actions with the same `type`, put them in a queue and execute them in serial  |
+| `resolve`         | object (optional)       | `{ type: '<ACTION_NAME>' }`                                             | Will be dispatched if the whole flow actions is successful. Effect result/response will be passed to the reducer automatically.                            |
+| `reject`          | object (optional)       | `{ type: '<ACTION_NAME>' }`                                             | Will be dispatched when one of the flow action is failed. Error will be passed to the reducer automatically.                                                 |
+| `take`            | string (optional)       | `first`(default), `every:serial`                                        | `first`: will not accept any flow actions with the same `type` with the one that currently running unti it's done<br><br>`every:serial`: take all dispatched flow actions with the same `type`, put them in a queue and execute them in serial  |
+
+
+### Task Cancellation
+
+Cancelling action with `async` metadata is possible if the effect is still running. Feature to cancel `flow` will come soon.
+
+```javascript
+...
+
+export function cancelRequestGetUser (payload) {
+  return {
+    type: 'CANCEL_REQUEST_GET_USER', // you can name this anything
+    payload,
+    meta: {
+      async: {
+        cancel: { type: 'REQUEST_GET_USER' }, // type of action to cancel
+        effect: payload => payload.source.cancel('Operation canceled by the user.'), 
+        resolve: { type: 'RESOLVE_CANCEL_REQUEST_GET_USER' }, // this will be dispatched after cancellation is completed
+        take: 'latest'
+      }
+    }
+  }
+}
+
+...
+```
+
+#### Properties
+
+| Property          | Type                    | Value                             | Description                                                                                                                                              |
+| ----------------- | ----------------------- | --------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `cancel`          | object                  | `{ type: '<ACTION_NAME>' }`       | `type` of action to cancel
+| `effect`          | function (optional)     | `() => {...}`                     | Callback to run in cancellation. For example, can be used to cancel `axios` http request.  
+| `resolve`         | object (optional)       | `{ type: '<ACTION_NAME>' }`       | Will be dispatched after cancellation is completed.                            |
+| `take`            | string (optional)       | `first`(default), `every:serial`  | `latest`: if an action effect still running when another action with the same `type` is dispatched, then the previous action will be cancelled<br><br>`every:parallel`: take all dispatched actions |
+
 
 ## Contributing
 

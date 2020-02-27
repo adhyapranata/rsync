@@ -107,28 +107,32 @@ export class Async {
         return
       }
 
-      store.dispatch({
-        type: resolve.type,
-        payload: {
-          ...payload,
-          type,
-          response,
-          state: store.getState()
-        }
-      })
+      if (resolve) {
+        store.dispatch({
+          type: resolve.type,
+          payload: {
+            ...payload,
+            type,
+            response,
+            state: store.getState()
+          }
+        })
+      }
 
       this._completeRunningTask(queue)
       this._cleanPrevCancelledTasks(type)
     } catch (error) {
-      store.dispatch({
-        type: reject.type,
-        error: {
-          ...payload,
-          type,
-          error,
-          state: store.getState()
-        }
-      })
+      if (reject) {
+        store.dispatch({
+          type: reject.type,
+          error: {
+            ...payload,
+            type,
+            error,
+            state: store.getState()
+          }
+        })
+      }
 
       this._completeRunningTask(queue)
       this._cleanPrevCancelledTasks(type)
