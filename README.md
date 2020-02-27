@@ -6,7 +6,7 @@
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 
 RSync is an alternative to redux-saga to handle async actions without generator syntax.
-It makes handling complicated async flow easier and offers a great readability.
+It makes handling complicated async flow easier and offers great readability.
 
 ## Table of Contents
 
